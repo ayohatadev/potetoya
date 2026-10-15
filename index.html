@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-T6M304DM42"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-T6M304DM42');
+</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -288,6 +296,8 @@ const GAME_URL=(()=>{
   try{const l=location;if(/^https?:$/.test(l.protocol)&&!/claude|anthropic/i.test(l.hostname))return l.origin+l.pathname}catch(e){}
   return 'https://claude.ai/artifact/LX556ft3Kfo2QX5fWTXn9c';
 })();
+// GA4 events (no-op when gtag isn't loaded, e.g. inside the Claude viewer)
+function track(name,params){try{if(typeof window.gtag==='function')window.gtag('event',name,params||{})}catch(e){}}
 const RANKS=[[0,'キャスト'],[5,'リーダー'],[12,'ストアリーダー'],[20,'副店長'],[30,'店長']];
 function rankOf(n){let r=RANKS[0][1];for(const [k,v] of RANKS)if(n>=k)r=v;return r}
 function start(){
@@ -296,6 +306,7 @@ function start(){
   $('score').textContent=0;
   $('rank').textContent=rankOf(0);
   newOrder();updCount();
+  track('game_start');
 }
 function over(reason,detail,kind){
   st.mode='over';
@@ -310,6 +321,7 @@ function over(reason,detail,kind){
   $('overScore').textContent=st.score;
   $('overServed').textContent=`ランク：${rankOf(st.served)}　提供した注文：${st.served}件`+(st.score>best?'　ベスト更新':'');
   const isBest=st.score>best&&st.score>0;
+  track('game_over',{score:st.score,served:st.served,rank:rankOf(st.served),reason:kind,customer:ch?ch.name:''});
   if(st.score>best){best=st.score;$('best').textContent=best;try{localStorage.setItem('potato-best',best)}catch(e){}}
   const post=`ポテト家で${st.score}点！\nランクは「${rankOf(st.served)}」。\n${st.served}人のお客さまにポテトを提供しました。\n#ポテト家\n${GAME_URL}`;
   // phones/tablets: open the X app's composer directly (no login page); PC: web intent
@@ -337,7 +349,7 @@ function serve(){
   $('score').textContent=st.score;
   st.flash={t:1,text:label};
   const nr=rankOf(st.served);
-  if(nr!==rankOf(st.served-1)){st.flash={t:1.4,text:`${nr}に昇格！`};$('rank').textContent=nr}
+  if(nr!==rankOf(st.served-1)){track('level_up',{level:RANKS.findIndex(r=>r[1]===nr)+1,character:nr});st.flash={t:1.4,text:`${nr}に昇格！`};$('rank').textContent=nr}
   st.fries=st.fries.filter(f=>f.y<H*0.35);
   newOrder();
 }
@@ -387,8 +399,10 @@ function playIntro(){
 }
 playIntro();
 $('btnTitle').addEventListener('click',playIntro);
+$('xPost').addEventListener('click',()=>track('share',{method:'x_post',content_type:'result'}));
 $('btnRetry').addEventListener('click',start);
 $('xShare').addEventListener('click',()=>{
+  track('share',{method:'image_share',content_type:'result'});
   const f=st.shareFile,showPrev=()=>{if(st.shareURL){$('shareImg').src=st.shareURL;$('sharePrev').hidden=false}};
   try{
     if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
