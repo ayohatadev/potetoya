@@ -99,6 +99,7 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
   animation:blink 1.1s steps(1) infinite}
 .push:active{transform:translateY(4px);box-shadow:0 1px 0 #8f2017}
 .push:focus-visible{outline:3px solid var(--fry);outline-offset:3px}
+.howto{position:relative;z-index:1;margin:-8px 0 0;text-align:center;font-weight:800;font-size:15px;line-height:1.8;color:var(--paper)}
 @keyframes blink{50%{color:var(--fry)}}
 .title .rain i{position:absolute;top:-60px;width:9px;height:46px;border-radius:3px;background:var(--fry);
   box-shadow:inset -3px 0 0 #d98e1c;opacity:.35;animation:fall linear infinite}
@@ -154,6 +155,7 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
     <div class="rain" id="rain" aria-hidden="true"></div>
     <h2>ポテト家</h2>
     <button class="push" id="btnPush">PUSH START</button>
+    <p class="howto">ポテトをあつめて、ていきょうしよう！<br>たまに、おじゃまなものがおちてくる！<br>きをつけよう！</p>
   </div>
   <div class="intro" id="intro" aria-label="オープニング（タップでスキップ）"><p>MMに捧ぐ</p></div>
   <button class="serve" id="btnServe" disabled>提供する</button>
