@@ -83,6 +83,7 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
 .xpost{display:block;text-align:center;font-weight:800;font-size:15px;padding:11px 6px;border-radius:6px;
   background:#111;color:#fff;text-decoration:none}
 .xweb{background:#fff;color:#111;border:2px solid #111}
+.card .totitle{font-family:var(--body);font-weight:800;font-size:14px;padding:10px;background:transparent;color:var(--ink);border:2px solid var(--ink);box-shadow:none}
 .card .share{font-family:var(--display);font-size:17px;border:0;border-radius:6px;padding:12px;background:var(--fry);color:var(--ink);box-shadow:0 4px 0 #b9831a;cursor:pointer}
 .shareprev{display:flex;flex-direction:column;gap:6px}
 .shareprev img{width:100%;border-radius:6px;display:block}
@@ -148,11 +149,10 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
         <div class="big" id="overScore">0</div>
         <p id="overServed"></p>
         <button id="btnRetry">もう一回</button>
+        <button class="totitle" id="btnTitle" type="button">タイトル画面に戻る</button>
         <button class="share" id="xShare" type="button">画像つきでシェア</button>
         <div class="shareprev" id="sharePrev" hidden><img id="shareImg" alt="ポテト家の結果画像"><p>画像を長押しして保存し、Xのポストに添付してください。</p></div>
         <a class="xpost" id="xPost" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener">Xでポスト</a>
-        <button class="xcopy" id="xCopy" type="button">ポスト文をコピー</button>
-        <textarea id="xText" class="xtext" readonly hidden></textarea>
       </div>
     </div>
   </div>
@@ -316,7 +316,6 @@ function over(reason,detail,kind){
   const enc=encodeURIComponent(post),xl=$('xPost');
   if(/iPhone|iPad|Android/i.test(navigator.userAgent)){xl.href='twitter://post?message='+enc;xl.removeAttribute('target')}
   else{xl.href='https://twitter.com/intent/tweet?text='+enc;xl.setAttribute('target','_blank')}
-  $('xText').value=post;$('xText').hidden=true;$('xCopy').textContent='ポスト文をコピー';
   // pre-build the share image so the tap can open the share sheet immediately
   st.sharePost=post;st.shareFile=null;$('sharePrev').hidden=true;
   try{
@@ -373,14 +372,21 @@ $('btnServe').addEventListener('click',serve);
   $('btnPush').addEventListener('click',()=>{$('title').hidden=true;start()});
 })();
 // opening: black screen, dedication fades in, then the shift starts
-(function intro(){
+let introTimers=[];
+function playIntro(){
   const el=$('intro');let done=false;
+  introTimers.forEach(clearTimeout);introTimers=[];
+  st.mode='idle';$('ovOver').hidden=true;$('title').hidden=false;updCount();
+  el.classList.remove('show','out');el.hidden=false;
   const r=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const finish=()=>{if(done)return;done=true;el.classList.add('out');setTimeout(()=>{el.hidden=true;$('btnPush').focus()},1100)};
-  el.addEventListener('click',finish);
-  setTimeout(()=>el.classList.add('show'),400);
-  setTimeout(finish,r?2200:4600);
-})();
+  const finish=()=>{if(done)return;done=true;el.classList.add('out');introTimers.push(setTimeout(()=>{el.hidden=true;$('btnPush').focus()},1100))};
+  el.onclick=finish;
+  void el.offsetWidth;
+  introTimers.push(setTimeout(()=>el.classList.add('show'),400));
+  introTimers.push(setTimeout(finish,r?2200:4600));
+}
+playIntro();
+$('btnTitle').addEventListener('click',playIntro);
 $('btnRetry').addEventListener('click',start);
 $('xShare').addEventListener('click',()=>{
   const f=st.shareFile,showPrev=()=>{if(st.shareURL){$('shareImg').src=st.shareURL;$('sharePrev').hidden=false}};
@@ -391,11 +397,6 @@ $('xShare').addEventListener('click',()=>{
     }
   }catch(e){}
   showPrev();
-});
-$('xCopy').addEventListener('click',()=>{
-  const t=$('xText');
-  const fallback=()=>{t.hidden=false;t.focus();t.select();$('xCopy').textContent='選択した文をコピーしてください'};
-  try{navigator.clipboard.writeText(t.value).then(()=>{$('xCopy').textContent='コピーしました。Xアプリに貼り付けてください'},fallback)}catch(e){fallback()}
 });
 
 // sizing
