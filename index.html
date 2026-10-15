@@ -83,6 +83,10 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
 .xpost{display:block;text-align:center;font-weight:800;font-size:15px;padding:11px 6px;border-radius:6px;
   background:#111;color:#fff;text-decoration:none}
 .xweb{background:#fff;color:#111;border:2px solid #111}
+.card .share{font-family:var(--display);font-size:17px;border:0;border-radius:6px;padding:12px;background:var(--fry);color:var(--ink);box-shadow:0 4px 0 #b9831a;cursor:pointer}
+.shareprev{display:flex;flex-direction:column;gap:6px}
+.shareprev img{width:100%;border-radius:6px;display:block}
+.shareprev p{font-size:12px;color:#8a6a55}
 .card .xcopy{font-family:var(--body);font-weight:800;font-size:13px;padding:9px;background:transparent;color:var(--ink);
   border:2px dashed #b89a7a;box-shadow:none}
 .xtext{width:100%;box-sizing:border-box;font:13px/1.5 var(--body);padding:8px;border-radius:6px;border:1px solid #d9c39f;resize:none}
@@ -144,6 +148,8 @@ canvas{display:block;touch-action:none;border-radius:6px;max-width:100%}
         <div class="big" id="overScore">0</div>
         <p id="overServed"></p>
         <button id="btnRetry">もう一回</button>
+        <button class="share" id="xShare" type="button">画像つきでシェア</button>
+        <div class="shareprev" id="sharePrev" hidden><img id="shareImg" alt="ポテト家の結果画像"><p>画像を長押しして保存し、Xのポストに添付してください。</p></div>
         <a class="xpost" id="xPost" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener">Xでポスト</a>
         <button class="xcopy" id="xCopy" type="button">ポスト文をコピー</button>
         <textarea id="xText" class="xtext" readonly hidden></textarea>
@@ -180,6 +186,52 @@ const LIFT=78;
 const FAIRY_CUST={name:'さつまいもの妖精',k:'L',lines:['お芋といえばさつまいも','さつまいもの妖精になりたいのー','ウルトラさつまいも'],overLines:{few:'やっぱり、さつまいもだよね',many:'やっぱり、さつまいもだよね',left:'MMもさつまいもの妖精になる？'},look:{fairy:true}};
 const cv=document.getElementById('cv'),mainCtx=cv.getContext('2d');
 let ctx=mainCtx;
+// result image for sharing (1080x1080), drawn with the same customer art
+function makeShareImage(ch,kind,reason,line,isBest){
+  const S=1080,cv2=document.createElement('canvas');cv2.width=S;cv2.height=S;
+  const g=cv2.getContext('2d');
+  g.fillStyle='#2b1410';g.fillRect(0,0,S,S);
+  g.strokeStyle='rgba(255,220,180,.06)';g.lineWidth=2;
+  for(let i=0;i<=S;i+=60){g.beginPath();g.moveTo(i,0);g.lineTo(i,S);g.moveTo(0,i);g.lineTo(S,i);g.stroke()}
+  g.textAlign='center';g.textBaseline='middle';
+  g.font='110px "Dela Gothic One",sans-serif';
+  g.fillStyle='#1a0a08';g.fillText('ポテト家',S/2+10,140+10);
+  g.fillStyle='#d93a2b';g.fillText('ポテト家',S/2+5,140+5);
+  g.fillStyle='#f5b82e';g.fillText('ポテト家',S/2,140);
+  g.fillStyle='#fff4dc';g.font='800 46px "M PLUS Rounded 1c",sans-serif';
+  g.fillText(reason,S/2,250);
+  g.font='190px "Dela Gothic One",sans-serif';g.fillStyle='#fff4dc';
+  g.fillText(String(st.score),S/2,410);
+  g.font='800 40px "M PLUS Rounded 1c",sans-serif';g.fillStyle='#c9a58a';
+  g.fillText(isBest?'点　ベスト更新！':'点',S/2,515);
+  // rank pill + served
+  const rank=rankOf(st.served);g.font='800 48px "M PLUS Rounded 1c",sans-serif';
+  const rw=g.measureText(rank).width+70;
+  g.fillStyle='#f5b82e';g.beginPath();g.roundRect?g.roundRect(S/2-rw/2,560,rw,76,38):g.rect(S/2-rw/2,560,rw,76);g.fill();
+  g.fillStyle='#2a1a12';g.fillText(rank,S/2,600);
+  g.fillStyle='#fff4dc';g.font='800 40px "M PLUS Rounded 1c",sans-serif';
+  g.fillText(`${st.served}人のお客さまに提供`,S/2,690);
+  // customer behind the counter + speech bubble
+  if(ch){
+    ctx=g;g.save();g.translate(220,960);g.scale(3,3);g.translate(-CUST_X-3-(ch.look.fairy?10:0),-(CUP_BOTTOM+4));
+    drawCustomer({x:CUST_X,t:0,look:ch.look,angry:kind==='left'},kind==='left'?0:kind==='many'?0.45:0.2,false);
+    g.restore();ctx=mainCtx;
+  }
+  g.fillStyle='#6b3a22';g.fillRect(0,960,S,S-960);g.fillStyle='#8a4d2c';g.fillRect(0,960,S,12);
+  if(line){
+    const bx=430,by=770,bw=600,bh=120;
+    g.fillStyle='#ffffff';g.strokeStyle='#2a1a12';g.lineWidth=6;
+    g.beginPath();g.roundRect?g.roundRect(bx,by,bw,bh,40):g.rect(bx,by,bw,bh);g.fill();g.stroke();
+    g.beginPath();g.moveTo(bx+4,by+50);g.lineTo(bx-40,by+80);g.lineTo(bx+4,by+82);g.closePath();g.fill();
+    g.beginPath();g.moveTo(bx,by+50);g.lineTo(bx-40,by+80);g.lineTo(bx,by+82);g.stroke();
+    g.fillStyle='#2a1a12';g.font='800 44px "M PLUS Rounded 1c",sans-serif';g.textAlign='left';
+    g.fillText(line,bx+36,by+bh/2,bw-72);g.textAlign='center';
+    if(ch){g.fillStyle='#c9a58a';g.font='800 32px "M PLUS Rounded 1c",sans-serif';g.textAlign='left';g.fillText(ch.name,bx+10,by-30);g.textAlign='center'}
+  }
+  g.fillStyle='#e8c9a8';g.font='800 30px "M PLUS Rounded 1c",sans-serif';
+  g.fillText(GAME_URL.replace(/^https?:\/\//,''),S/2,1030,S-80);
+  return cv2;
+}
 function drawOverCustomer(ch,kind){
   const oc=$('overCust'),dpr=Math.min(2,devicePixelRatio||1),S=96;
   oc.width=S*dpr;oc.height=S*dpr;
@@ -257,6 +309,7 @@ function over(reason,detail,kind){
   $('overDetail').textContent=detail;
   $('overScore').textContent=st.score;
   $('overServed').textContent=`ランク：${rankOf(st.served)}　提供した注文：${st.served}件`+(st.score>best?'　ベスト更新':'');
+  const isBest=st.score>best&&st.score>0;
   if(st.score>best){best=st.score;$('best').textContent=best;try{localStorage.setItem('potato-best',best)}catch(e){}}
   const post=`ポテト家で${st.score}点！\nランクは「${rankOf(st.served)}」。\n${st.served}人のお客さまにポテトを提供しました。\n#ポテト家\n${GAME_URL}`;
   // phones/tablets: open the X app's composer directly (no login page); PC: web intent
@@ -264,6 +317,13 @@ function over(reason,detail,kind){
   if(/iPhone|iPad|Android/i.test(navigator.userAgent)){xl.href='twitter://post?message='+enc;xl.removeAttribute('target')}
   else{xl.href='https://twitter.com/intent/tweet?text='+enc;xl.setAttribute('target','_blank')}
   $('xText').value=post;$('xText').hidden=true;$('xCopy').textContent='ポスト文をコピー';
+  // pre-build the share image so the tap can open the share sheet immediately
+  st.sharePost=post;st.shareFile=null;$('sharePrev').hidden=true;
+  try{
+    const img=makeShareImage(ch,kind,reason,line,isBest);
+    st.shareURL=img.toDataURL('image/png');
+    img.toBlob(b=>{if(b)try{st.shareFile=new File([b],'potetoya.png',{type:'image/png'})}catch(e){}},'image/png');
+  }catch(e){st.shareURL=null}
   $('ovOver').hidden=false;updCount();
   $('btnRetry').focus();
 }
@@ -322,6 +382,16 @@ $('btnServe').addEventListener('click',serve);
   setTimeout(finish,r?2200:4600);
 })();
 $('btnRetry').addEventListener('click',start);
+$('xShare').addEventListener('click',()=>{
+  const f=st.shareFile,showPrev=()=>{if(st.shareURL){$('shareImg').src=st.shareURL;$('sharePrev').hidden=false}};
+  try{
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){
+      navigator.share({files:[f],text:st.sharePost}).catch(err=>{if(!err||err.name!=='AbortError')showPrev()});
+      return;
+    }
+  }catch(e){}
+  showPrev();
+});
 $('xCopy').addEventListener('click',()=>{
   const t=$('xText');
   const fallback=()=>{t.hidden=false;t.focus();t.select();$('xCopy').textContent='選択した文をコピーしてください'};
